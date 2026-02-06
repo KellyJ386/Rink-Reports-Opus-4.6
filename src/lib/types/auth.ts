@@ -1,18 +1,2 @@
-export type UserRole =
-  | "super_admin"
-  | "facility_admin"
-  | "manager"
-  | "supervisor"
-  | "staff"
-  | "read_only";
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  role: UserRole;
-  facility_id: string;
-  avatar_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Re-export from database types for backwards compatibility
+export type { UserRole, Profile as UserProfile } from "./database";
