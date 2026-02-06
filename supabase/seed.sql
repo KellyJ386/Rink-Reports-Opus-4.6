@@ -1,0 +1,2 @@
+-- Development seed data
+-- To be populated in Phase 1 (Database Schema) and Phase 2 (Auth & RLS)
