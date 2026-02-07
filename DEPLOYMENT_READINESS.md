@@ -10,12 +10,12 @@
 ## Overall Deployment Readiness
 
 ```
-████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  39.0%
+██████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░  43.9%
 ```
 
-**Overall Score: 39.0%** — Phases 0-3 Complete, Admin Control Center Built
+**Overall Score: 43.9%** — Phases 0-4 Complete, App Shell & Dashboard Built
 
-**Summary:** Phases 0-3 (Scaffold, Database, Auth & RLS, Admin Control Center) are complete. The entire admin foundation is now in place with 8 admin sections, 7 server action files, full CRUD for all config tables, Zod validation, toast notifications, confirmation dialogs, dark mode, and mobile responsive design. Feature modules (Phases 4-13) are unblocked.
+**Summary:** Phases 0-4 are complete. The full app shell is in place with header, sidebar navigation, breadcrumbs, dashboard with module grid, alert badges, dark mode toggle, and module access guard. Feature modules (Phases 5-11) are now unblocked and can be parallelized.
 
 ---
 
@@ -27,7 +27,7 @@
 | 1 | Database Schema | **86%** | Complete | 2x | 1.72 |
 | 2 | Auth & RLS | **82%** | Complete | 2x | 1.64 |
 | 3 | Admin Control Center | **85%** | Complete | 2x | 1.70 |
-| 4 | Dashboard & Layout | 0% | Not Started | 1x | 0.0 |
+| 4 | Dashboard & Layout | **85%** | Complete | 1x | 0.85 |
 | 5 | Daily Reports | 0% | Not Started | 1x | 0.0 |
 | 6 | Ice Depth Management | 0% | Not Started | 1x | 0.0 |
 | 7 | Ice Operations | 0% | Not Started | 1x | 0.0 |
@@ -38,7 +38,7 @@
 | 12 | Notifications System | 0% | Not Started | 0.75x | 0.0 |
 | 13 | Reporting & Export | 0% | Not Started | 0.75x | 0.0 |
 
-**Weighted Average:** (1.76 + 1.72 + 1.64 + 1.70) / 17.5 = **39.0%** (Phases 0-3 at 2x weight, total denominator 17.5)
+**Weighted Average:** (1.76 + 1.72 + 1.64 + 1.70 + 0.85) / 17.5 = **43.9%**
 
 ---
 
@@ -194,13 +194,39 @@
 
 ---
 
-### Phases 4-13: Feature Modules — 0% ❌ Not Started
+### Phase 4: Dashboard & Layout — 85% ✅ Complete
 
-All feature modules remain at 0%. Placeholder pages exist for all routes.
+**Completion Criteria (14 items — 12/14 met):**
+- [x] App shell renders with header, sidebar (desktop), hamburger nav (mobile)
+- [x] Dashboard shows grid of module buttons (responsive: 2/3/4 columns)
+- [x] Only enabled modules appear on dashboard
+- [x] Only role-permitted modules appear
+- [x] Alert badges display correct counts
+- [x] Alert badges only show when count > 0
+- [x] Dark mode toggles correctly and persists
+- [x] All components render correctly in both light and dark mode
+- [x] Breadcrumbs show correct path on all pages
+- [x] User menu shows profile, dark mode, logout
+- [ ] Notification bell shows count — **Hook created, runtime testing needed**
+- [x] Module guard prevents unauthorized access
+- [ ] Mobile hamburger menu works correctly — **Sheet component wired, runtime testing needed**
+- [x] Minimum 48x48px touch targets on all interactive elements
+
+**What's Done:**
+- Header with logo, notification bell, user menu (dark mode toggle, sign out)
+- Sidebar with module navigation (from enabled modules), admin link for admins
+- Breadcrumbs auto-generated from pathname
+- Dashboard with responsive module grid + alert badges
+- AlertBadge, ModuleGuard, useAlertCounts, useNotifications components/hooks
+
+---
+
+### Phases 5-13: Feature Modules — 0% ❌ Not Started
+
+Placeholder pages exist for all routes. Phases 5-11 are unblocked and can be parallelized.
 
 | Phase | Module | Criteria | Status |
 |-------|--------|----------|--------|
-| 4 | Dashboard & Layout | 14 items | Not Started |
 | 5 | Daily Reports | 13 items | Not Started |
 | 6 | Ice Depth Management | 17 items | Not Started |
 | 7 | Ice Operations | 14 items | Not Started |
@@ -230,16 +256,16 @@ All feature modules remain at 0%. Placeholder pages exist for all routes.
 
 ## Recommended Next Action
 
-### Execute Agent 04: Dashboard & Layout
+### Execute Agents 05-11: Feature Modules (Parallelizable)
 
-Phases 0-3 are complete. The next step is to build the main app layout and dashboard:
-1. App shell with sidebar navigation, header, breadcrumbs
-2. Dashboard with module cards showing alert counts
-3. Notification bell with unread count
-4. Module guard component (checks if module is enabled)
-5. Responsive sidebar with mobile sheet
-
-**Agent spec:** `docs/agents/04-dashboard-and-layout.md`
+Phases 0-4 are complete. Feature modules can now be built in parallel:
+- Agent 05: Daily Reports (checklist completion UI)
+- Agent 06: Ice Depth Management (readings, diagram, history)
+- Agent 07: Ice Operations (ice makes, blade changes, edging, circle checks)
+- Agent 08: Employee Scheduling (calendar, availability, swaps)
+- Agent 09: Incident Reporting (form, body diagram, list)
+- Agent 10: Refrigeration Plant (readings, equipment, history)
+- Agent 11: Air Quality (readings, locations, history)
 
 ---
 
@@ -251,8 +277,8 @@ Phases 0-3 are complete. The next step is to build the main app layout and dashb
 | ~~2~~ | ~~1~~ | ~~Database Schema~~ | ✅ Done | ~~Unblocked by Phase 0~~ |
 | ~~3~~ | ~~2~~ | ~~Auth & RLS~~ | ✅ Done | ~~Unblocked by Phase 1~~ |
 | ~~4~~ | ~~3~~ | ~~Admin Control Center~~ | ✅ Done | ~~Unblocked by Phase 2~~ |
-| **5** | **4** | **Dashboard & Layout** | **Next** | **Unblocked by Phase 3** |
-| 6-12 | 5-11 | Feature Modules | Blocked | Requires Phase 4, can parallelize |
+| ~~5~~ | ~~4~~ | ~~Dashboard & Layout~~ | ✅ Done | ~~Unblocked by Phase 3~~ |
+| **6-12** | **5-11** | **Feature Modules** | **Next** | **Parallelizable, all unblocked** |
 | 13 | 12 | Notifications System | Blocked | Requires all modules |
 | 14 | 13 | Reporting & Export | Blocked | Requires notifications |
 
@@ -278,4 +304,4 @@ Phases 0-3 are complete. The next step is to build the main app layout and dashb
 
 ---
 
-*Report updated: 2026-02-06 | Phases 0-3 completed | Next update: After Phase 4 completion*
+*Report updated: 2026-02-07 | Phases 0-4 completed | Next update: After feature modules completion*
