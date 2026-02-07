@@ -1,23 +1,26 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/toast'
 
-interface Notification {
+export interface Notification {
   id: string
-  user_id: string
+  facility_id: string
+  recipient_id: string
   title: string
-  message: string
-  type: string
+  body: string | null
+  link: string | null
   is_read: boolean
   created_at: string
-  link?: string | null
 }
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const userIdRef = useRef<string | null>(null)
 
   const supabase = createClient()
 
@@ -32,25 +35,34 @@ export function useNotifications() {
       if (!user) {
         setNotifications([])
         setUnreadCount(0)
+        userIdRef.current = null
         setLoading(false)
         return
       }
 
-      const { data } = await supabase
+      userIdRef.current = user.id
+
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('recipient_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(50)
 
-      if (data) {
-        setNotifications(data as Notification[])
-        setUnreadCount(data.filter((n) => !n.is_read).length)
+      if (error) {
+        console.error('[useNotifications] Fetch error:', error.message)
+        setNotifications([])
+        setUnreadCount(0)
+      } else if (data) {
+        const typed = data as Notification[]
+        setNotifications(typed)
+        setUnreadCount(typed.filter((n) => !n.is_read).length)
       } else {
         setNotifications([])
         setUnreadCount(0)
       }
-    } catch {
+    } catch (err) {
+      console.error('[useNotifications] Unexpected error:', err)
       setNotifications([])
       setUnreadCount(0)
     } finally {
@@ -60,24 +72,93 @@ export function useNotifications() {
 
   const markAsRead = useCallback(
     async (id: string) => {
+      // Optimistic update
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      )
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', id)
 
-      if (!error) {
+      if (error) {
+        // Revert optimistic update on failure
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+          prev.map((n) => (n.id === id ? { ...n, is_read: false } : n))
         )
-        setUnreadCount((prev) => Math.max(0, prev - 1))
+        setUnreadCount((prev) => prev + 1)
+        toast({ title: 'Failed to mark notification as read', variant: 'destructive' })
       }
     },
-    [supabase]
+    [supabase, toast]
   )
 
+  const markAllAsRead = useCallback(async () => {
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id)
+    if (unreadIds.length === 0) return
+
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+    setUnreadCount(0)
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('recipient_id', userIdRef.current!)
+      .eq('is_read', false)
+
+    if (error) {
+      // Revert on failure
+      await fetchNotifications()
+      toast({ title: 'Failed to mark all as read', variant: 'destructive' })
+    }
+  }, [supabase, notifications, fetchNotifications, toast])
+
+  // Initial fetch
   useEffect(() => {
     fetchNotifications()
   }, [fetchNotifications])
 
-  return { unreadCount, notifications, loading, markAsRead }
+  // Realtime subscription for new notifications
+  useEffect(() => {
+    if (!userIdRef.current) return
+
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_id=eq.${userIdRef.current}`,
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification
+          setNotifications((prev) => [newNotification, ...prev])
+          setUnreadCount((prev) => prev + 1)
+
+          toast({
+            title: newNotification.title,
+            description: newNotification.body || undefined,
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, toast, loading])
+
+  return {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    refetch: fetchNotifications,
+  }
 }
