@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 100% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 100% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 100% 13%;
+
+    --primary: 210 100% 13%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 207 5% 67%;
+    --secondary-foreground: 210 100% 13%;
+
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 96 65% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 42 100% 50%;
+    --warning-foreground: 210 100% 13%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 210 100% 13%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 210 100% 7%;
+    --foreground: 210 20% 90%;
+
+    --card: 210 50% 10%;
+    --card-foreground: 210 20% 90%;
+
+    --popover: 210 50% 10%;
+    --popover-foreground: 210 20% 90%;
+
+    --primary: 96 65% 45%;
+    --primary-foreground: 210 100% 7%;
+
+    --secondary: 207 5% 30%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 210 50% 20%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 96 65% 45%;
+    --accent-foreground: 210 100% 7%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 42 96% 50%;
+    --warning-foreground: 210 100% 7%;
+
+    --border: 210 50% 20%;
+    --input: 210 50% 20%;
+    --ring: 96 65% 45%;
+  }
+}
+
+@theme {
+  --color-navy: #002244;
+  --color-navy-dark: #001122;
+  --color-navy-light: #003366;
+  --color-action-green: #69BE28;
+  --color-action-green-hover: #5AA822;
+  --color-wolf-grey: #A5ACAF;
+  --color-wolf-grey-light: #D1D5D8;
+  --color-wolf-grey-dark: #6B7280;
+  --color-alert-yellow: #FFB800;
+  --color-alert-red: #D32F2F;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+@layer base {
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .touch-target {
+    @apply min-h-[48px] min-w-[48px];
+  }
+}
