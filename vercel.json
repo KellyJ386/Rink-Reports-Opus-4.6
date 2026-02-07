@@ -3,6 +3,10 @@
     {
       "path": "/api/scheduled-reports",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/shift-reminders",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

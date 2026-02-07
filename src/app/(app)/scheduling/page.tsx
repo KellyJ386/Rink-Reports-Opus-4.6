@@ -44,7 +44,7 @@ import {
   isSameDay,
   parseISO,
 } from 'date-fns'
-import { createShift, updateShift, deleteShift } from './actions'
+import { createShift, updateShift, deleteShift, requestSwap } from './actions'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -74,6 +74,7 @@ interface Shift {
 interface Employee {
   id: string
   full_name: string
+  availability_status?: 'available' | 'unavailable' | 'unknown'
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +108,8 @@ export default function SchedulingPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [requestingSwap, setRequestingSwap] = useState(false)
+  const [swapTargetId, setSwapTargetId] = useState('')
 
   // Responsive: default to day view on mobile
   useEffect(() => {
@@ -158,14 +161,48 @@ export default function SchedulingPage() {
 
   const fetchEmployees = useCallback(async () => {
     if (!profile?.facility_id) return
-    const { data } = await supabase
+    const { data: empData } = await supabase
       .from('profiles')
       .select('id, full_name')
       .eq('facility_id', profile.facility_id)
       .eq('is_active', true)
       .order('full_name')
-    if (data) setEmployees(data as Employee[])
-  }, [profile?.facility_id, supabase])
+
+    if (!empData) return
+
+    // Fetch availability for the visible date range
+    const { data: availData } = await supabase
+      .from('employee_availability')
+      .select('employee_id, is_available')
+      .eq('facility_id', profile.facility_id)
+      .gte('date', dateRangeStart)
+      .lte('date', dateRangeEnd)
+
+    const availMap = new Map<string, boolean>()
+    if (availData) {
+      for (const a of availData) {
+        // If any entry for this employee in range, track it
+        const prev = availMap.get(a.employee_id)
+        if (prev === undefined) {
+          availMap.set(a.employee_id, a.is_available)
+        } else if (a.is_available) {
+          availMap.set(a.employee_id, true) // at least one available day
+        }
+      }
+    }
+
+    const enriched: Employee[] = empData.map((emp) => {
+      const hasEntry = availMap.has(emp.id)
+      return {
+        ...emp,
+        availability_status: hasEntry
+          ? availMap.get(emp.id) ? 'available' : 'unavailable'
+          : 'unknown',
+      }
+    })
+
+    setEmployees(enriched)
+  }, [profile?.facility_id, supabase, dateRangeStart, dateRangeEnd])
 
   useEffect(() => {
     if (!authLoading && profile?.facility_id) {
@@ -266,6 +303,34 @@ export default function SchedulingPage() {
       })
     }
     setDeleting(false)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Request Swap
+  // ---------------------------------------------------------------------------
+  async function handleRequestSwap() {
+    if (!selectedShift || !swapTargetId) {
+      toast({ title: 'Select a target employee for the swap', variant: 'destructive' })
+      return
+    }
+    setRequestingSwap(true)
+    const result = await requestSwap({
+      shift_id: selectedShift.id,
+      target_id: swapTargetId,
+    })
+    if (result.success) {
+      toast({ title: 'Swap request submitted', variant: 'success' })
+      setDetailDialogOpen(false)
+      setSelectedShift(null)
+      setSwapTargetId('')
+    } else {
+      toast({
+        title: 'Failed to request swap',
+        description: typeof result.error === 'string' ? result.error : 'Error',
+        variant: 'destructive',
+      })
+    }
+    setRequestingSwap(false)
   }
 
   // ---------------------------------------------------------------------------
@@ -409,11 +474,24 @@ export default function SchedulingPage() {
                       <SelectContent>
                         {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
-                            {emp.full_name}
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm" title={
+                                emp.availability_status === 'available' ? 'Available' :
+                                emp.availability_status === 'unavailable' ? 'Not available' :
+                                'No availability submitted'
+                              }>
+                                {emp.availability_status === 'available' ? '✅' :
+                                 emp.availability_status === 'unavailable' ? '❌' : '⚠️'}
+                              </span>
+                              {emp.full_name}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      ✅ Available · ❌ Not available · ⚠️ No availability submitted
+                    </p>
                   </div>
 
                   {/* Is Open */}
@@ -652,6 +730,38 @@ export default function SchedulingPage() {
                   <p className="mt-0.5">{selectedShift.notes}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Request Swap — visible to staff who own this shift */}
+          {selectedShift && !isManager && !isReadOnly && selectedShift.assigned_to === profile?.id && (
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-sm font-medium text-foreground">Request Swap</p>
+              <div className="space-y-2">
+                <Label htmlFor="swap-target" className="text-xs text-muted-foreground">Swap with</Label>
+                <Select value={swapTargetId} onValueChange={setSwapTargetId}>
+                  <SelectTrigger id="swap-target">
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees
+                      .filter((e) => e.id !== profile?.id)
+                      .map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.full_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleRequestSwap}
+                disabled={requestingSwap || !swapTargetId}
+                className="w-full bg-navy hover:bg-navy-light text-white min-h-[48px]"
+              >
+                {requestingSwap && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                Request Swap
+              </Button>
             </div>
           )}
 

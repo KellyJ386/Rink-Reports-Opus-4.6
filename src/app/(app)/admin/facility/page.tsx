@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { updateFacilitySettings, updateOperatingHours } from './actions'
+import { cn } from '@/lib/utils'
 import { Building2, Clock, Loader2 } from 'lucide-react'
 
 const TIME_ZONES = [
@@ -59,9 +60,11 @@ export default function FacilitySettingsPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Facility fields
   const [name, setName] = useState('')
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [address, setAddress] = useState('')
   const [timeZone, setTimeZone] = useState('America/New_York')
   const [seasonal, setSeasonal] = useState(false)
@@ -99,6 +102,7 @@ export default function FacilitySettingsPage() {
           setTimeZone(facility.time_zone || 'America/New_York')
           setSeasonal(facility.seasonal_operation ?? false)
           setSessionDuration(facility.session_duration_hours ?? 1)
+          setLogoUrl(facility.logo_url ?? null)
 
           if (facility.open_months && Array.isArray(facility.open_months)) {
             const months = new Array(12).fill(false)
@@ -242,6 +246,60 @@ export default function FacilitySettingsPage() {
     }
   }
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile?.facility_id) return
+
+    const maxSize = 2 * 1024 * 1024 // 2MB
+    if (file.size > maxSize) {
+      toast({ title: 'File too large', description: 'Max file size is 2MB.', variant: 'destructive' })
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file type', description: 'Please upload an image file.', variant: 'destructive' })
+      return
+    }
+
+    setUploadingLogo(true)
+    try {
+      const ext = file.name.split('.').pop() ?? 'png'
+      const filePath = `logos/${profile.facility_id}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('facility-assets')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        toast({ title: 'Upload failed', description: uploadError.message, variant: 'destructive' })
+        setUploadingLogo(false)
+        return
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('facility-assets')
+        .getPublicUrl(filePath)
+
+      const publicUrl = urlData.publicUrl
+
+      const { error: updateError } = await supabase
+        .from('facilities')
+        .update({ logo_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('id', profile.facility_id)
+
+      if (updateError) {
+        toast({ title: 'Failed to save logo URL', description: updateError.message, variant: 'destructive' })
+      } else {
+        setLogoUrl(publicUrl)
+        toast({ title: 'Logo uploaded successfully', variant: 'success' })
+      }
+    } catch {
+      toast({ title: 'Upload failed', variant: 'destructive' })
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -293,6 +351,43 @@ export default function FacilitySettingsPage() {
               placeholder="Street address, city, state/province, postal code"
               rows={3}
             />
+          </div>
+
+          {/* Facility Logo */}
+          <div className="space-y-2">
+            <Label>Facility Logo</Label>
+            <div className="flex items-center gap-4">
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Facility logo"
+                  className="h-16 w-16 rounded-lg object-contain border border-border bg-white dark:bg-navy-dark"
+                />
+              )}
+              <div>
+                <label
+                  htmlFor="logo-upload"
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md cursor-pointer min-h-[48px]',
+                    'border border-input bg-background hover:bg-accent transition-colors',
+                    uploadingLogo && 'opacity-50 pointer-events-none'
+                  )}
+                >
+                  {uploadingLogo ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  {logoUrl ? 'Change Logo' : 'Upload Logo'}
+                </label>
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="sr-only"
+                />
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG, or SVG. Max 2MB.</p>
+              </div>
+            </div>
           </div>
 
           {/* Time Zone */}
