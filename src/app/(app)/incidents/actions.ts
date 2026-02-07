@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { notifyIncidentCreated } from '@/lib/services/notify';
 
 /* ------------------------------------------------------------------ */
 /*  Schemas                                                            */
@@ -83,6 +84,24 @@ export async function createIncidentReport(data: {
   }
 
   revalidatePath('/incidents');
+
+  // Fire-and-forget notification to managers/admins
+  if (report) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('facility_id')
+      .eq('id', user?.id ?? '')
+      .single();
+
+    if (profile?.facility_id) {
+      notifyIncidentCreated({
+        facilityId: profile.facility_id,
+        incidentId: report.id,
+        type: parsed.data.type,
+      });
+    }
+  }
+
   return { data: report };
 }
 

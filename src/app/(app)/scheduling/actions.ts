@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { notifyShiftSwapRequested, notifySwapReviewed } from '@/lib/services/notify';
 
 /* ------------------------------------------------------------------ */
 /*  Schemas                                                            */
@@ -193,6 +194,24 @@ export async function requestSwap(data: {
   }
 
   revalidatePath('/scheduling');
+
+  // Notify target employee + managers about swap request
+  if (swap) {
+    const { data: reqProfile } = await supabase
+      .from('profiles')
+      .select('full_name, facility_id')
+      .eq('id', parsed.data.requestingEmployeeId)
+      .single();
+
+    if (reqProfile?.facility_id) {
+      notifyShiftSwapRequested({
+        facilityId: reqProfile.facility_id,
+        targetEmployeeId: parsed.data.targetEmployeeId,
+        requestingEmployeeName: reqProfile.full_name ?? 'A team member',
+      });
+    }
+  }
+
   return { data: swap };
 }
 
@@ -223,6 +242,25 @@ export async function reviewSwap(id: string, approved: boolean, note?: string) {
   }
 
   revalidatePath('/scheduling');
+
+  // Notify both employees about the review result
+  if (swap) {
+    const { data: reqProfile } = await supabase
+      .from('profiles')
+      .select('facility_id')
+      .eq('id', swap.requesting_employee_id)
+      .single();
+
+    if (reqProfile?.facility_id) {
+      notifySwapReviewed({
+        facilityId: reqProfile.facility_id,
+        requestingEmployeeId: swap.requesting_employee_id,
+        targetEmployeeId: swap.target_employee_id,
+        approved,
+      });
+    }
+  }
+
   return { data: swap };
 }
 

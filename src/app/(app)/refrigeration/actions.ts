@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { notifyRefrigerationOutOfRange } from "@/lib/services/notify"
 
 /* ---------- Types ---------- */
 
@@ -34,6 +35,44 @@ export async function submitReading(reading: RefrigerationReading) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Check thresholds and notify if out of range
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("facility_id")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.facility_id) {
+    // Fetch equipment info and reading types with thresholds
+    const { data: equipment } = await supabase
+      .from("equipment")
+      .select("name")
+      .eq("id", reading.equipmentId)
+      .single()
+
+    const { data: readingTypes } = await supabase
+      .from("equipment_reading_types")
+      .select("key, label, min_value, max_value")
+      .eq("equipment_id", reading.equipmentId)
+
+    for (const rt of readingTypes ?? []) {
+      const val = reading.values[rt.key]
+      if (typeof val === "number") {
+        if ((rt.max_value !== null && val > rt.max_value) ||
+            (rt.min_value !== null && val < rt.min_value)) {
+          notifyRefrigerationOutOfRange({
+            facilityId: profile.facility_id,
+            equipmentId: reading.equipmentId,
+            equipmentName: equipment?.name ?? "Equipment",
+            metric: rt.label,
+            value: val,
+            threshold: rt.max_value !== null && val > rt.max_value ? rt.max_value : rt.min_value!,
+          })
+        }
+      }
+    }
   }
 
   return { success: true }

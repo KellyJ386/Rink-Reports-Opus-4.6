@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { notifyAirQualityOutOfRange } from "@/lib/services/notify"
 
 /* ---------- Types ---------- */
 
@@ -42,6 +43,29 @@ export async function submitAirQualityReading(reading: AirQualityReading) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Check thresholds and notify if out of range
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("facility_id")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.facility_id) {
+    const AQ_LIMITS = { co: { max: 25, label: "CO" }, co2: { max: 1000, label: "CO2" }, no2: { max: 0.1, label: "NO2" } } as const
+    for (const [key, limit] of Object.entries(AQ_LIMITS)) {
+      const val = reading[key as keyof typeof AQ_LIMITS]
+      if (val > limit.max) {
+        notifyAirQualityOutOfRange({
+          facilityId: profile.facility_id,
+          location: reading.location,
+          metric: limit.label,
+          value: val,
+          threshold: limit.max,
+        })
+      }
+    }
   }
 
   return { success: true }
