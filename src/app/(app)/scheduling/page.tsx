@@ -30,6 +30,9 @@ import {
   Calendar as CalendarIcon,
   Loader2,
   Trash2,
+  Users,
+  Briefcase,
+  LayoutGrid,
 } from 'lucide-react'
 import {
   format,
@@ -87,6 +90,7 @@ export default function SchedulingPage() {
 
   // State
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week')
+  const [groupBy, setGroupBy] = useState<'day' | 'employee' | 'position'>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [shifts, setShifts] = useState<Shift[]>([])
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
@@ -378,6 +382,26 @@ export default function SchedulingPage() {
             </TabsList>
           </Tabs>
 
+          {/* Group-by Toggle (week view only) */}
+          {viewMode === 'week' && (
+            <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as 'day' | 'employee' | 'position')}>
+              <TabsList>
+                <TabsTrigger value="day" className="min-w-[48px] gap-1">
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Grid</span>
+                </TabsTrigger>
+                <TabsTrigger value="employee" className="min-w-[48px] gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">By Employee</span>
+                </TabsTrigger>
+                <TabsTrigger value="position" className="min-w-[48px] gap-1">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">By Position</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+
           {/* Navigation */}
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={goPrev} aria-label="Previous">
@@ -546,9 +570,9 @@ export default function SchedulingPage() {
       )}
 
       {/* ------------------------------------------------------------------- */}
-      {/* WEEK VIEW                                                           */}
+      {/* WEEK VIEW — Grid (day cards)                                        */}
       {/* ------------------------------------------------------------------- */}
-      {!loadingData && viewMode === 'week' && (
+      {!loadingData && viewMode === 'week' && groupBy === 'day' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {weekDays.map((day) => {
             const dayShifts = getShiftsForDate(day)
@@ -600,6 +624,220 @@ export default function SchedulingPage() {
             )
           })}
         </div>
+      )}
+
+      {/* ------------------------------------------------------------------- */}
+      {/* WEEK VIEW — By Employee (matrix: rows=employees, cols=days)         */}
+      {/* ------------------------------------------------------------------- */}
+      {!loadingData && viewMode === 'week' && groupBy === 'employee' && (
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] border-collapse">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 bg-card border-b border-r px-3 py-2 text-left text-sm font-semibold text-foreground w-[140px]">
+                    Employee
+                  </th>
+                  {weekDays.map((day) => (
+                    <th
+                      key={day.toISOString()}
+                      className={cn(
+                        'border-b px-2 py-2 text-center text-xs font-medium min-w-[100px]',
+                        isToday(day) ? 'bg-action-green/10 dark:bg-action-green/20' : 'bg-muted/30'
+                      )}
+                    >
+                      <span className="text-muted-foreground">{format(day, 'EEE')}</span>
+                      <br />
+                      <span className={cn('text-base font-bold', isToday(day) ? 'text-action-green' : 'text-foreground')}>
+                        {format(day, 'd')}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((emp) => (
+                  <tr key={emp.id} className="border-b last:border-b-0 hover:bg-muted/20">
+                    <td className="sticky left-0 z-10 bg-card border-r px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs" title={
+                          emp.availability_status === 'available' ? 'Available' :
+                          emp.availability_status === 'unavailable' ? 'Not available' :
+                          'No availability submitted'
+                        }>
+                          {emp.availability_status === 'available' ? '✅' :
+                           emp.availability_status === 'unavailable' ? '❌' : '⚠️'}
+                        </span>
+                        <span className="text-sm font-medium text-foreground truncate max-w-[110px]">
+                          {emp.full_name}
+                        </span>
+                      </div>
+                    </td>
+                    {weekDays.map((day) => {
+                      const empShifts = shifts.filter(
+                        (s) => s.shift_date === format(day, 'yyyy-MM-dd') && s.assigned_to === emp.id
+                      )
+                      return (
+                        <td
+                          key={day.toISOString()}
+                          className={cn(
+                            'border-r last:border-r-0 px-1 py-1 align-top',
+                            isToday(day) && 'bg-action-green/5'
+                          )}
+                        >
+                          <div className="space-y-1">
+                            {empShifts.map((shift) => (
+                              <ShiftBlock
+                                key={shift.id}
+                                shiftTypeName={shift.shift_types?.name ?? 'Unknown'}
+                                shiftTypeColor={shift.shift_types?.color ?? '#6B7280'}
+                                startTime={formatTime(shift.start_time)}
+                                endTime={formatTime(shift.end_time)}
+                                employeeName={undefined}
+                                isOpen={shift.is_open}
+                                isBroadcast={shift.is_broadcast}
+                                onClick={() => openShiftDetail(shift)}
+                              />
+                            ))}
+                          </div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                {/* Unassigned / open row */}
+                {(() => {
+                  const hasUnassigned = shifts.some((s) => !s.assigned_to)
+                  if (!hasUnassigned) return null
+                  return (
+                    <tr className="border-b last:border-b-0 hover:bg-muted/20">
+                      <td className="sticky left-0 z-10 bg-card border-r px-3 py-2">
+                        <span className="text-sm font-medium text-muted-foreground italic">Unassigned</span>
+                      </td>
+                      {weekDays.map((day) => {
+                        const unassigned = shifts.filter(
+                          (s) => s.shift_date === format(day, 'yyyy-MM-dd') && !s.assigned_to
+                        )
+                        return (
+                          <td
+                            key={day.toISOString()}
+                            className={cn(
+                              'border-r last:border-r-0 px-1 py-1 align-top',
+                              isToday(day) && 'bg-action-green/5'
+                            )}
+                          >
+                            <div className="space-y-1">
+                              {unassigned.map((shift) => (
+                                <ShiftBlock
+                                  key={shift.id}
+                                  shiftTypeName={shift.shift_types?.name ?? 'Unknown'}
+                                  shiftTypeColor={shift.shift_types?.color ?? '#6B7280'}
+                                  startTime={formatTime(shift.start_time)}
+                                  endTime={formatTime(shift.end_time)}
+                                  employeeName={undefined}
+                                  isOpen={shift.is_open}
+                                  isBroadcast={shift.is_broadcast}
+                                  onClick={() => openShiftDetail(shift)}
+                                />
+                              ))}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })()}
+              </tbody>
+            </table>
+          </div>
+          {employees.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground text-sm">No employees found.</div>
+          )}
+        </Card>
+      )}
+
+      {/* ------------------------------------------------------------------- */}
+      {/* WEEK VIEW — By Position (matrix: rows=shift types, cols=days)       */}
+      {/* ------------------------------------------------------------------- */}
+      {!loadingData && viewMode === 'week' && groupBy === 'position' && (
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] border-collapse">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 bg-card border-b border-r px-3 py-2 text-left text-sm font-semibold text-foreground w-[140px]">
+                    Position
+                  </th>
+                  {weekDays.map((day) => (
+                    <th
+                      key={day.toISOString()}
+                      className={cn(
+                        'border-b px-2 py-2 text-center text-xs font-medium min-w-[100px]',
+                        isToday(day) ? 'bg-action-green/10 dark:bg-action-green/20' : 'bg-muted/30'
+                      )}
+                    >
+                      <span className="text-muted-foreground">{format(day, 'EEE')}</span>
+                      <br />
+                      <span className={cn('text-base font-bold', isToday(day) ? 'text-action-green' : 'text-foreground')}>
+                        {format(day, 'd')}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shiftTypes.map((st) => (
+                  <tr key={st.id} className="border-b last:border-b-0 hover:bg-muted/20">
+                    <td className="sticky left-0 z-10 bg-card border-r px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: st.color }}
+                        />
+                        <span className="text-sm font-medium text-foreground truncate max-w-[110px]">
+                          {st.name}
+                        </span>
+                      </div>
+                    </td>
+                    {weekDays.map((day) => {
+                      const posShifts = shifts.filter(
+                        (s) => s.shift_date === format(day, 'yyyy-MM-dd') && s.shift_type_id === st.id
+                      )
+                      return (
+                        <td
+                          key={day.toISOString()}
+                          className={cn(
+                            'border-r last:border-r-0 px-1 py-1 align-top',
+                            isToday(day) && 'bg-action-green/5'
+                          )}
+                        >
+                          <div className="space-y-1">
+                            {posShifts.map((shift) => (
+                              <ShiftBlock
+                                key={shift.id}
+                                shiftTypeName={shift.profiles?.full_name ?? (shift.is_open ? 'OPEN' : 'Unassigned')}
+                                shiftTypeColor={st.color}
+                                startTime={formatTime(shift.start_time)}
+                                endTime={formatTime(shift.end_time)}
+                                employeeName={undefined}
+                                isOpen={shift.is_open}
+                                isBroadcast={shift.is_broadcast}
+                                onClick={() => openShiftDetail(shift)}
+                              />
+                            ))}
+                          </div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {shiftTypes.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground text-sm">No shift types configured.</div>
+          )}
+        </Card>
       )}
 
       {/* ------------------------------------------------------------------- */}
