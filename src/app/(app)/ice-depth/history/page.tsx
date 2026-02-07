@@ -34,6 +34,7 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
+import { ExportButton } from '@/components/shared/ExportButton'
 
 // ============================================
 // Types
@@ -271,6 +272,13 @@ export default function IceDepthHistoryPage() {
             </p>
           </div>
         </div>
+        <ExportButton
+          module="ice_depth"
+          reportType="measurement_history"
+          startDate={dateFrom || format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')}
+          endDate={dateTo || format(new Date(), 'yyyy-MM-dd')}
+          filters={selectedRinkId ? { rinkId: selectedRinkId } : undefined}
+        />
       </div>
 
       {/* Filters */}

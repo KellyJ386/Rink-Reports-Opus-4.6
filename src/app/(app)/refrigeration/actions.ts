@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { sendNotification, getManagerRecipients } from '@/lib/services/notifications'
 
 async function getAuthProfile() {
   const supabase = await createClient()
@@ -135,6 +136,20 @@ export async function saveRefrigerationReading(data: {
       reference_id: reading.id,
       message: 'Refrigeration reading has out-of-range values',
       is_acknowledged: false,
+    })
+
+    // Notify managers about out-of-range reading
+    getManagerRecipients(profile.facility_id).then((managers) => {
+      if (managers.length > 0) {
+        sendNotification({
+          facilityId: profile.facility_id,
+          recipientIds: managers,
+          title: 'Refrigeration: Out-of-Range Reading',
+          body: 'A refrigeration reading has values outside the configured thresholds. Immediate attention may be required.',
+          link: '/refrigeration/history',
+          triggerType: 'out_of_range',
+        }).catch(() => {})
+      }
     })
   }
 

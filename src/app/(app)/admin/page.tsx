@@ -8,6 +8,7 @@ import {
   Wrench,
   Gauge,
   Database,
+  CalendarClock,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
@@ -59,6 +60,12 @@ const sections = [
     description: 'Configure data archival and retention policies.',
     href: '/admin/data-retention',
     icon: Database,
+  },
+  {
+    title: 'Scheduled Reports',
+    description: 'Configure automatic daily and weekly report delivery.',
+    href: '/admin/scheduled-reports',
+    icon: CalendarClock,
   },
 ]
 

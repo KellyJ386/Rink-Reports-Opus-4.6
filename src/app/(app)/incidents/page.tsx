@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, subDays } from 'date-fns'
+import { ExportButton } from '@/components/shared/ExportButton'
 import {
   Plus,
   Search,
@@ -151,12 +152,20 @@ export default function IncidentsPage() {
             {filtered.length} report{filtered.length !== 1 ? 's' : ''} found
           </p>
         </div>
-        <Button asChild className="bg-action-green hover:bg-action-green-hover text-white">
-          <Link href="/incidents/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Report
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <ExportButton
+            module="incidents"
+            reportType="incident_log"
+            startDate={dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd')}
+            endDate={dateTo || format(new Date(), 'yyyy-MM-dd')}
+          />
+          <Button asChild className="bg-action-green hover:bg-action-green-hover text-white">
+            <Link href="/incidents/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Report
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

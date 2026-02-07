@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { sendNotification, getManagerRecipients } from '@/lib/services/notifications'
 
 async function getAuthProfile() {
   const supabase = await createClient()
@@ -123,6 +124,20 @@ export async function saveAirQualityReading(data: {
       reference_id: reading.id,
       message: 'Air quality reading has out-of-range values',
       is_acknowledged: false,
+    })
+
+    // Notify managers about out-of-range reading
+    getManagerRecipients(profile.facility_id).then((managers) => {
+      if (managers.length > 0) {
+        sendNotification({
+          facilityId: profile.facility_id,
+          recipientIds: managers,
+          title: 'Air Quality: Out-of-Range Reading',
+          body: 'An air quality reading has values outside the configured thresholds. Immediate attention may be required.',
+          link: '/air-quality/history',
+          triggerType: 'out_of_range',
+        }).catch(() => {})
+      }
     })
   }
 

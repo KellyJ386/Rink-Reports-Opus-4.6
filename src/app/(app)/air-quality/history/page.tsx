@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { ExportButton } from '@/components/shared/ExportButton'
 
 // ============================================
 // Types
@@ -241,14 +242,23 @@ export default function AirQualityHistoryPage() {
       </Link>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-navy dark:text-white flex items-center gap-2">
-          <History className="h-6 w-6" />
-          Air Quality History
-        </h1>
-        <p className="mt-1 text-sm text-wolf-grey-dark dark:text-wolf-grey">
-          View past air quality readings
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-navy dark:text-white flex items-center gap-2">
+            <History className="h-6 w-6" />
+            Air Quality History
+          </h1>
+          <p className="mt-1 text-sm text-wolf-grey-dark dark:text-wolf-grey">
+            View past air quality readings
+          </p>
+        </div>
+        <ExportButton
+          module="air_quality"
+          reportType="compliance_report"
+          startDate={dateFrom}
+          endDate={dateTo}
+          filters={selectedLocationId !== 'all' ? { locationId: selectedLocationId } : undefined}
+        />
       </div>
 
       {/* Filters */}

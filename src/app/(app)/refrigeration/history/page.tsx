@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { ExportButton } from '@/components/shared/ExportButton'
 
 // ============================================
 // Types
@@ -272,14 +273,23 @@ export default function RefrigerationHistoryPage() {
       </Link>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-navy dark:text-white flex items-center gap-2">
-          <History className="h-6 w-6" />
-          Refrigeration History
-        </h1>
-        <p className="mt-1 text-sm text-wolf-grey-dark dark:text-wolf-grey">
-          View past equipment readings and trends
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-navy dark:text-white flex items-center gap-2">
+            <History className="h-6 w-6" />
+            Refrigeration History
+          </h1>
+          <p className="mt-1 text-sm text-wolf-grey-dark dark:text-wolf-grey">
+            View past equipment readings and trends
+          </p>
+        </div>
+        <ExportButton
+          module="refrigeration"
+          reportType="reading_history"
+          startDate={dateFrom}
+          endDate={dateTo}
+          filters={selectedEquipmentId !== 'all' ? { equipmentId: selectedEquipmentId } : undefined}
+        />
       </div>
 
       {/* Filters */}

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { sendNotification, getManagerRecipients } from '@/lib/services/notifications'
 
 // ============================================
 // Validation Schema
@@ -100,6 +101,20 @@ export async function createIncidentReport(data: {
     reference_id: report.id,
     message: `New ${typeLabel} reported`,
     is_acknowledged: false,
+  })
+
+  // Notify managers about the new incident
+  getManagerRecipients(profile.facility_id).then((managers) => {
+    if (managers.length > 0) {
+      sendNotification({
+        facilityId: profile.facility_id,
+        recipientIds: managers,
+        title: `New ${typeLabel} report submitted`,
+        body: validated.description.slice(0, 200),
+        link: `/incidents/${report.id}`,
+        triggerType: 'new_incident',
+      }).catch(() => {})
+    }
   })
 
   revalidatePath('/incidents')

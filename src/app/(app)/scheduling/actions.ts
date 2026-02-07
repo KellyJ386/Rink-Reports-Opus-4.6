@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { sendNotification, getManagerRecipients, getFacilityRecipients } from '@/lib/services/notifications'
 
 // ---------------------------------------------------------------------------
 // Auth helper
@@ -208,6 +209,30 @@ export async function requestSwap(data: { shift_id: string; target_id: string })
 
   if (error) return { success: false, error: error.message }
 
+  // Notify managers about new swap request
+  getManagerRecipients(profile.facility_id).then((managers) => {
+    if (managers.length > 0) {
+      sendNotification({
+        facilityId: profile.facility_id,
+        recipientIds: managers,
+        title: 'New Shift Swap Request',
+        body: `${profile.full_name} has requested a shift swap.`,
+        link: '/scheduling/swaps',
+        triggerType: 'swap_request',
+      }).catch(() => {})
+    }
+  })
+
+  // Notify the target employee
+  sendNotification({
+    facilityId: profile.facility_id,
+    recipientIds: [parsed.data.target_id],
+    title: 'Shift Swap Requested',
+    body: `${profile.full_name} has requested to swap a shift with you.`,
+    link: '/scheduling/swaps',
+    triggerType: 'swap_request',
+  }).catch(() => {})
+
   revalidatePath('/scheduling/swaps')
   return { success: true }
 }
@@ -262,6 +287,20 @@ export async function reviewSwap(id: string, approved: boolean, note?: string) {
       .eq('facility_id', profile.facility_id)
 
     if (shiftError) return { success: false, error: shiftError.message }
+  }
+
+  // Notify requester and target about swap decision
+  const statusText = approved ? 'approved' : 'denied'
+  const notifyIds = [swapRequest.requester_id, swapRequest.target_id].filter(Boolean)
+  if (notifyIds.length > 0) {
+    sendNotification({
+      facilityId: profile.facility_id,
+      recipientIds: notifyIds,
+      title: `Shift Swap ${approved ? 'Approved' : 'Denied'}`,
+      body: `Your shift swap request has been ${statusText} by ${profile.full_name}.`,
+      link: '/scheduling',
+      triggerType: 'swap_reviewed',
+    }).catch(() => {})
   }
 
   revalidatePath('/scheduling/swaps')
@@ -324,6 +363,20 @@ export async function broadcastShift(shiftId: string) {
     .eq('facility_id', profile.facility_id)
 
   if (error) return { success: false, error: error.message }
+
+  // Notify all facility staff about the broadcast open shift
+  getFacilityRecipients(profile.facility_id).then((recipients) => {
+    if (recipients.length > 0) {
+      sendNotification({
+        facilityId: profile.facility_id,
+        recipientIds: recipients,
+        title: 'Open Shift Available',
+        body: 'A new open shift has been broadcast. Check the open shifts board to pick it up.',
+        link: '/scheduling/open-shifts',
+        triggerType: 'shift_broadcast',
+      }).catch(() => {})
+    }
+  })
 
   revalidatePath('/scheduling/open-shifts')
   revalidatePath('/scheduling')
