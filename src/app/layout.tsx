@@ -11,6 +11,11 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Max Facility",
   },
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

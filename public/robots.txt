@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin
+Disallow: /api
+Allow: /login
+Allow: /forgot-password
+
+Sitemap: https://app.maxfacility.com/sitemap.xml

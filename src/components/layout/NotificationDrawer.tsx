@@ -16,7 +16,7 @@ import { BellOff, CheckCheck } from "lucide-react"
 
 /* ---------- Types ---------- */
 
-interface Notification {
+export interface Notification {
   id: string
   title: string
   body: string
@@ -28,44 +28,9 @@ interface Notification {
 interface NotificationDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  notifications: Notification[]
+  onMarkAllRead: () => void
 }
-
-/* ---------- Mock data ---------- */
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "n1",
-    title: "Compressor #2 Out of Range",
-    body: "Head pressure reading of 310 PSI exceeds the 300 PSI threshold. Please inspect immediately.",
-    link: "/refrigeration/compressor-2",
-    createdAt: new Date(Date.now() - 12 * 60000).toISOString(), // 12 min ago
-    read: false,
-  },
-  {
-    id: "n2",
-    title: "Air Quality Alert - Lobby",
-    body: "CO level at 30 PPM exceeds the 25 PPM safe limit. Ventilation check recommended.",
-    link: "/air-quality/history",
-    createdAt: new Date(Date.now() - 2 * 3600000).toISOString(), // 2h ago
-    read: false,
-  },
-  {
-    id: "n3",
-    title: "Shift Schedule Published",
-    body: "The schedule for next week (June 16 - June 22) has been published by the facility manager.",
-    link: "/scheduling",
-    createdAt: new Date(Date.now() - 8 * 3600000).toISOString(), // 8h ago
-    read: false,
-  },
-  {
-    id: "n4",
-    title: "Incident Report Filed",
-    body: "A slip-and-fall incident was reported in the lobby area. Review pending.",
-    link: "/incidents",
-    createdAt: new Date(Date.now() - 26 * 3600000).toISOString(), // 26h ago
-    read: true,
-  },
-]
 
 /* ---------- Helpers ---------- */
 
@@ -82,7 +47,7 @@ function formatRelativeTime(iso: string): string {
 
 /* ---------- Component ---------- */
 
-export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerProps) {
+export function NotificationDrawer({ open, onOpenChange, notifications, onMarkAllRead }: NotificationDrawerProps) {
   const router = useRouter()
 
   const handleClick = (notification: Notification) => {
@@ -90,10 +55,6 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
       router.push(notification.link)
       onOpenChange(false)
     }
-  }
-
-  const handleMarkAllRead = () => {
-    // In production this would call a server action to mark all read
   }
 
   return (
@@ -109,7 +70,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
               variant="ghost"
               size="sm"
               className="text-xs text-muted-foreground"
-              onClick={handleMarkAllRead}
+              onClick={onMarkAllRead}
             >
               <CheckCheck className="h-3.5 w-3.5 mr-1" />
               Mark All Read

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, ShieldAlert, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ type IncidentType = 'incident' | 'accident';
 
 export default function NewIncidentPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   /* Form state */
   const [incidentType, setIncidentType] = useState<IncidentType>('incident');

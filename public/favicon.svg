@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Rounded square background in brand navy -->
+  <rect x="2" y="2" width="60" height="60" rx="12" ry="12" fill="#002244"/>
+  <!-- Action green accent line at bottom -->
+  <rect x="10" y="48" width="44" height="4" rx="2" ry="2" fill="#69BE28"/>
+  <!-- MF text in white -->
+  <text x="32" y="40" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="26" fill="#FFFFFF" text-anchor="middle">MF</text>
+</svg>

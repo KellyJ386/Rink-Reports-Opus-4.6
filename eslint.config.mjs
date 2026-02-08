@@ -1,14 +1,14 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { createRequire } from "module";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+// eslint-config-next v16 exports flat config arrays directly (no FlatCompat needed)
+const nextCoreWebVitals = require("eslint-config-next/dist/core-web-vitals");
+const nextTypescript = require("eslint-config-next/dist/typescript");
 
-const eslintConfig = [...compat.extends("next/core-web-vitals", "next/typescript")];
+const eslintConfig = [
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+];
 
 export default eslintConfig;
