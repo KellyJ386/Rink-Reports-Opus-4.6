@@ -85,7 +85,7 @@ export function NotificationDrawer({ open, onOpenChange, notifications, onMarkAl
 
         {/* Notification list */}
         <ScrollArea className="flex-1">
-          {MOCK_NOTIFICATIONS.length === 0 ? (
+          {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <BellOff className="h-10 w-10 mb-3 opacity-40" />
               <p className="text-sm font-medium">No notifications</p>
@@ -93,7 +93,7 @@ export function NotificationDrawer({ open, onOpenChange, notifications, onMarkAl
             </div>
           ) : (
             <div className="divide-y">
-              {MOCK_NOTIFICATIONS.map((n) => (
+              {notifications.map((n) => (
                 <button
                   key={n.id}
                   type="button"

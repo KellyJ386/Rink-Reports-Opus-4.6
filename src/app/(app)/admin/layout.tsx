@@ -12,6 +12,7 @@ import {
   Wrench,
   Gauge,
   Database,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -26,6 +27,7 @@ const adminSections = [
   { href: "/admin/equipment", label: "Equipment", icon: Wrench },
   { href: "/admin/thresholds", label: "Thresholds", icon: Gauge },
   { href: "/admin/data-retention", label: "Data Retention", icon: Database },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
 ];
 
 export default function AdminLayout({

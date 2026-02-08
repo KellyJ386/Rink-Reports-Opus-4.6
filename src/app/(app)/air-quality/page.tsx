@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/use-toast"
 import { Wind, AlertTriangle, Save, History } from "lucide-react"
 
 /* ---------- Locations ---------- */
@@ -53,6 +54,7 @@ function nowLocalISO(): string {
 
 export default function AirQualityPage() {
   const router = useRouter()
+  const { toast } = useToast()
 
   const [location, setLocation] = useState("")
   const [values, setValues] = useState<Record<string, string>>({})
@@ -76,10 +78,34 @@ export default function AirQualityPage() {
 
   const handleSubmit = async () => {
     setSubmitting(true)
-    // In production this would call the server action
-    await new Promise((r) => setTimeout(r, 600))
-    setSubmitting(false)
-    setSubmitted(true)
+    try {
+      // In production this would call the server action
+      const result = await new Promise<{ success: boolean; error?: string }>((r) =>
+        setTimeout(() => r({ success: true }), 600)
+      )
+
+      if ('error' in result && result.error) {
+        toast({
+          title: "Error",
+          description: typeof result.error === 'string' ? result.error : "Something went wrong",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Success",
+          description: "Air quality reading recorded successfully.",
+        })
+        setSubmitted(true)
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Something went wrong while submitting the reading.",
+        variant: "destructive",
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (

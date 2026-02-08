@@ -8,6 +8,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -183,6 +184,7 @@ function generateMockShifts(weekStart: Date): ShiftBlockData[] {
 /* ------------------------------------------------------------------ */
 
 function AddShiftDialog({ onAdd }: { onAdd: (shift: ShiftBlockData) => void }) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -209,6 +211,11 @@ function AddShiftDialog({ onAdd }: { onAdd: (shift: ShiftBlockData) => void }) {
       positionLabel: POSITION_LABELS[position as ShiftType],
       employeeName: employee,
       notes: notes || undefined,
+    });
+
+    toast({
+      title: 'Success',
+      description: `Shift created for ${POSITION_LABELS[position as ShiftType]} on ${date}.`,
     });
 
     // Reset & close

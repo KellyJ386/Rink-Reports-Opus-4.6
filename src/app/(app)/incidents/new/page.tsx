@@ -78,11 +78,35 @@ export default function NewIncidentPage() {
     if (!canSubmit()) return;
     setSubmitting(true);
 
-    // In a real app, this would call createIncidentReport server action.
-    // For now, simulate a brief delay and redirect.
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      // In a real app, this would call createIncidentReport server action.
+      // For now, simulate a brief delay and redirect.
+      const result = await new Promise<{ success: boolean; error?: string }>((resolve) =>
+        setTimeout(() => resolve({ success: true }), 600)
+      );
 
-    router.push('/incidents');
+      if ('error' in result && result.error) {
+        toast({
+          title: 'Error',
+          description: typeof result.error === 'string' ? result.error : 'Something went wrong',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Incident report submitted successfully.',
+        });
+        router.push('/incidents');
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Something went wrong while submitting the report.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

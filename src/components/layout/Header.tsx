@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Menu, Bell, Moon, Sun, LogOut, User } from "lucide-react";
@@ -8,6 +8,9 @@ import { Menu, Bell, Moon, Sun, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BRAND } from "@/lib/constants/brand";
 import { logout } from "@/app/(auth)/actions";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useAlertCounts } from "@/lib/hooks/useAlertCounts";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
+import { NotificationDrawer, type Notification } from "@/components/layout/NotificationDrawer";
 
 interface HeaderProps {
   className?: string;
@@ -28,12 +32,67 @@ interface HeaderProps {
 export function Header({ className }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Placeholder alert count - will be replaced with useAlertCounts hook
-  const alertCount = 0;
+  const { profile, user } = useAuth();
+  const { counts } = useAlertCounts();
 
-  // Placeholder user initials - will be replaced with auth context
-  const userInitials = "MF";
+  // Total alert count across all modules
+  const alertCount = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+  // Compute initials from the user's full name (first letter of first and last name)
+  const userInitials = (() => {
+    if (!profile?.full_name) return "??";
+    const parts = profile.full_name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  })();
+
+  // Fetch notifications from Supabase
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("recipient_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setNotifications(
+        data.map((row: Record<string, unknown>) => ({
+          id: row.id as string,
+          title: row.title as string,
+          body: row.body as string,
+          link: (row.link as string) ?? undefined,
+          createdAt: row.created_at as string,
+          read: row.read as boolean,
+        }))
+      );
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Mark all notifications as read
+  const handleMarkAllRead = useCallback(async () => {
+    if (!user) return;
+    const supabase = createClient();
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("recipient_id", user.id)
+      .eq("read", false);
+
+    // Update local state immediately
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read: true }))
+    );
+  }, [user]);
 
   return (
     <>
@@ -82,6 +141,7 @@ export function Header({ className }: HeaderProps) {
             size="icon"
             className="relative"
             aria-label="Notifications"
+            onClick={() => setNotifOpen(true)}
           >
             <Bell className="h-5 w-5" />
             {alertCount > 0 && (
@@ -113,10 +173,10 @@ export function Header({ className }: HeaderProps) {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    Facility Manager
+                    {profile?.full_name ?? "User"}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    manager@maxfacility.com
+                    {profile?.email ?? ""}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -153,6 +213,14 @@ export function Header({ className }: HeaderProps) {
 
       {/* Mobile sidebar sheet */}
       <MobileSidebar open={mobileOpen} onOpenChange={setMobileOpen} />
+
+      {/* Notification drawer */}
+      <NotificationDrawer
+        open={notifOpen}
+        onOpenChange={setNotifOpen}
+        notifications={notifications}
+        onMarkAllRead={handleMarkAllRead}
+      />
     </>
   );
 }

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/use-toast"
 import { ArrowLeft, AlertTriangle, Save } from "lucide-react"
 
 /* ---------- Equipment metadata ---------- */
@@ -79,6 +80,7 @@ function nowLocalISO(): string {
 export default function EquipmentReadingPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>()
   const router = useRouter()
+  const { toast } = useToast()
 
   const equipment = EQUIPMENT_MAP[equipmentId]
 
@@ -119,10 +121,34 @@ export default function EquipmentReadingPage() {
 
   const handleSubmit = async () => {
     setSubmitting(true)
-    // In production this would call a server action
-    await new Promise((r) => setTimeout(r, 600))
-    setSubmitting(false)
-    setSubmitted(true)
+    try {
+      // In production this would call a server action
+      const result = await new Promise<{ success: boolean; error?: string }>((r) =>
+        setTimeout(() => r({ success: true }), 600)
+      )
+
+      if ('error' in result && result.error) {
+        toast({
+          title: "Error",
+          description: typeof result.error === 'string' ? result.error : "Something went wrong",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Success",
+          description: `${equipment.name} reading recorded successfully.`,
+        })
+        setSubmitted(true)
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Something went wrong while submitting the reading.",
+        variant: "destructive",
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
